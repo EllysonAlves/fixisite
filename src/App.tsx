@@ -5,6 +5,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import Home from "./pages/home/Home";
 import Login from "./pages/login/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
+import Produtos from "./pages/dashboard/produtos";
 
 function App() {
   return (
@@ -21,6 +22,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/produtos"
+            element={
+              <PrivateRoute>
+                <Produtos />
               </PrivateRoute>
             }
           />
