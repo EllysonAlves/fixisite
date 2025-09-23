@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { StringFormatParams } from 'zod/v4/core';
 
 const api = axios.create({
   baseURL: 'https://ticonnecte.com.br/FixiSite-api/public/',
@@ -33,9 +34,35 @@ interface Products {
   enterprise_id: string
 }
 
+interface benefits{
+  id: string,
+  plans_id: string,
+  description: string,
+  created_at: string,
+  updated_at: string
+}
+
+interface Plans{
+  id: string,
+  name: string,
+  title: string,
+  price: string,
+  product_id: string,
+  created_at: string,
+  updated_at: string,
+  benefits: benefits[]
+}
+
 interface UpdateProductData {
   name: string;
   enterprise_id: string;
+}
+
+interface UpdatePlanData{
+  name: string,
+  title: string,
+  price: string,
+  product_id: string
 }
 
 
@@ -175,3 +202,137 @@ export const deleteProduct = async (token: string, produto: { id: string; name: 
   }
 };
 
+export const getPlans = async (token: string): Promise<Plans[]> => {
+  try {
+    const response = await api.get(
+      'api/plan',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!response.data || !Array.isArray(response.data)) {
+      throw new Error('Formato de dados inválido na resposta da API');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar planos:', error);
+    throw new Error(error.response?.data?.message || 'Erro ao carregar planos');
+  }
+};
+
+export const addPlan = async (token: string, data: Record<string, any>) => {
+  try {
+    const response = await api.post("api/plan", data, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: token ? `Bearer ${token}` : '',
+      },
+    });
+
+    // Verifica se a resposta indica sucesso
+    if (response.data.status === 'error') {
+      throw new Error(response.data.message || 'Erro ao adicionar plano');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao adicionar plano:', error);
+
+    // Tratamento detalhado do erro
+    let errorMessage = 'Erro ao adicionar plano';
+
+    if (error.response) {
+      // Erro vindo do servidor
+      errorMessage = error.response.data?.message ||
+        error.response.data?.error ||
+        `Erro ${error.response.status}: ${error.response.statusText}`;
+    } else if (error.request) {
+      // A requisição foi feita mas não houve resposta
+      errorMessage = 'Sem resposta do servidor';
+    } else {
+      // Outros erros
+      errorMessage = error.message || error;
+    }
+
+    throw new Error(errorMessage);
+  }
+};
+
+export const updatePlan = async (token: string, id: string, data: UpdatePlanData) => {
+  try {
+    const response = await api.put(`api/plan/${id}`, data, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: token ? `Bearer ${token}` : '',
+      },
+    });
+
+    // Verifica se a resposta indica erro
+    if (response.data.status === 'error') {
+      throw new Error(response.data.message || 'Erro ao atualizar plano');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao atualizar plano:', error);
+
+    const errorMessage =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      'Erro ao atualizar plano';
+
+    throw new Error(errorMessage);
+  }
+};
+
+export const deletePlan = async (token: string, id: string) => {
+  try {
+    const response = await api.delete(
+      `api/plan/${id}`, // endpoint do produto
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token ? `Bearer ${token}` : '',
+        },
+      }
+    );
+
+    if (response.data.status === 'error') {
+      const error = new Error(response.data.message || 'Erro ao deletar plano');
+      (error as any).response = { data: response.data };
+      throw error;
+    }
+
+    return {
+      success: true,
+      data: response.data,
+      message: response.data.message || 'Plano deletado com sucesso',
+    };
+  } catch (error: any) {
+    console.error('Erro ao deletar plano:', error);
+
+    let errorMessage = 'Erro ao deletar plano';
+    let errorDetails = null;
+
+    if (error.response) {
+      errorMessage = error.response.data?.message || errorMessage;
+      errorDetails = error.response.data?.details || error.response.data;
+    } else if (error.request) {
+      errorMessage = 'Sem resposta do servidor';
+    } else {
+      errorMessage = error.message || error;
+    }
+
+    const err = new Error(errorMessage);
+    (err as any).success = false;
+    (err as any).details = errorDetails;
+    (err as any).status = error.response?.status;
+    (err as any).code = error.response?.data?.code;
+    throw err;
+  }
+};
