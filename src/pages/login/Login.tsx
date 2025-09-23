@@ -38,6 +38,13 @@ const Login: React.FC = () => {
         })
       );
 
+      localStorage.setItem(
+        "token",response.token
+      )
+      
+
+      
+
       toast.success("Login realizado com sucesso!");
       navigate("/Dashboard");
     } catch (error: any) {
