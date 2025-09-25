@@ -5,7 +5,7 @@ import { useTheme } from "../context/ThemeContext";
 
 const menuItems = [
   { id: "produtos", label: "Produtos", to: "/produtos", icon: <FiBox /> },
-  { id: "planos", label: "Planos", to: "/planos", icon: <FiLayers /> },
+  // { id: "planos", label: "Planos", to: "/planos", icon: <FiLayers /> },
   { id: "temas", label: "Temas", to: "/temas", icon: <FiLayout /> },
   { id: "contas", label: "Contas", to: "/contas", icon: <FiUsers /> },
   { id: "config", label: "Configurações", to: "/configuracoes", icon: <FiSettings /> },

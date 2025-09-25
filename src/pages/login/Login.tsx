@@ -35,12 +35,14 @@ const Login: React.FC = () => {
           token: response.token,
           name: response.name,
           email: response.email,
+          tenant_id: response.tenant_id,
         })
       );
 
       localStorage.setItem(
-        "token",response.token
+        "token",response.token,
       )
+
       
 
       

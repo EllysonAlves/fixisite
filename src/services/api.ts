@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import type { StringFormatParams } from 'zod/v4/core';
 
@@ -63,6 +64,21 @@ interface UpdatePlanData{
   title: string,
   price: string,
   product_id: string
+}
+
+interface Tenant{
+  id: string,
+  name: string,
+  domain: string,
+  logo: string,
+  theme: string | {
+    primary: string;
+    secondary: string;
+    [key: string]: string;
+  },
+  cpf_cnpj: string,
+  created_at: string,
+  updated_at: string
 }
 
 
@@ -336,3 +352,136 @@ export const deletePlan = async (token: string, id: string) => {
     throw err;
   }
 };
+
+export const getOneTenant = async (token: string, id: string): Promise<Tenant> => {
+  try {
+    const response = await api.get(
+      `api/tenant/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!response.data || typeof response.data !== 'object') {
+      throw new Error('Formato de dados inválido na resposta da API');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar Tenant:', error);
+    throw new Error(error.response?.data?.message || 'Erro ao carregar Tenant');
+  }
+};
+
+export const getTenant = async (token: string): Promise<Tenant[]> => {
+  try {
+    const response = await api.get(
+      'api/tenant',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!response.data || !Array.isArray(response.data)) {
+      throw new Error('Formato de dados inválido na resposta da API');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar Tenants:', error);
+    throw new Error(error.response?.data?.message || 'Erro ao carregar Tenants');
+  }
+};
+
+export const updateTenant = async (
+  token: string,
+  id: string,
+  data: {
+    name: string;
+    domain: string;
+    logo: File | null;
+    cpf_cnpj: string;
+    theme: string;
+  }
+) => {
+  try {
+    const formData = new FormData();
+    formData.append('id', id);
+    formData.append('name', data.name);
+    formData.append('domain', data.domain);
+    formData.append('cpf_cnpj', data.cpf_cnpj);
+    formData.append('theme', data.theme);
+    if (data.logo) {
+      formData.append('logo', data.logo);
+    }
+
+    const response = await api.post(`api/tenant/update`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: token ? `Bearer ${token}` : '',
+      },
+    });
+
+    if (response.data.status === 'error') {
+      throw new Error(response.data.message || 'Erro ao atualizar tenant');
+    }
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao atualizar tenant:', error);
+    const errorMessage =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      'Erro ao atualizar tenant';
+    throw new Error(errorMessage);
+  }
+};
+
+export const addTenant = async (
+  token: string,
+  data: {
+    id: string;
+    name: string;
+    domain: string;
+    logo: File | null;
+    cpf_cnpj: string;
+    theme: string;
+  }
+) => {
+  try {
+    const formData = new FormData();
+    formData.append('id', data.id);
+    formData.append('name', data.name);
+    formData.append('domain', data.domain);
+    formData.append('cpf_cnpj', data.cpf_cnpj);
+    formData.append('theme', data.theme);
+    if (data.logo) {
+      formData.append('logo', data.logo);
+    }
+
+    const response = await api.post(`api/tenant/add`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: token ? `Bearer ${token}` : '',
+      },
+    });
+
+    if (response.data.status === 'error') {
+      throw new Error(response.data.message || 'Erro ao adicionar tenant');
+    }
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao adicionar tenant:', error);
+    const errorMessage =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      'Erro ao adicionar tenant';
+    throw new Error(errorMessage);
+  }
+};
+

@@ -6,6 +6,8 @@ import Home from "./pages/home/Home";
 import Login from "./pages/login/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Produtos from "./pages/dashboard/produtos";
+import ConfiguracaoTenant from "./pages/dashboard/configuracao";
+import Temas from "./pages/dashboard/temas";
 
 function App() {
   return (
@@ -30,6 +32,22 @@ function App() {
             element={
               <PrivateRoute>
                 <Produtos />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/configuracoes"
+            element={
+              <PrivateRoute>
+                <ConfiguracaoTenant />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/temas"
+            element={
+              <PrivateRoute>
+                <Temas />
               </PrivateRoute>
             }
           />
