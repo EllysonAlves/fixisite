@@ -16,10 +16,13 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Lógica para token expirado
+  response => response,
+  error => {
+    if (error.response && error.response.status === 401) {
+      // Remove token e redireciona
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }

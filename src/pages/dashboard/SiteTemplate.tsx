@@ -369,7 +369,7 @@ const SiteTemplate = () => {
         <div className="container mx-auto px-6 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-lg">{tenant?.domain ? `Internet para ${tenant.domain}` : "Internet Rápida e Estável"}</h1>
           <p className="text-xl md:text-2xl mb-8">Monte seu combo personalizado e aproveite os melhores benefícios</p>
-          <a href="#planos" className="bg-blue-600 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-700 transition duration-300 inline-flex items-center shadow-lg">
+          <a href="#planos" className=" text-white font-bold py-3 px-8 rounded-full  transition duration-300 inline-flex items-center shadow-lg" style={{ backgroundColor: theme.primary }}>
             Ver Planos
             <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
