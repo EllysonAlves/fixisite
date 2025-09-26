@@ -1,12 +1,10 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { FiCheckCircle, FiLoader } from 'react-icons/fi';
 import { useTheme } from '../../context/ThemeContext';
 import Modal from '../../components/Modal';
 import Sidebar from '../../components/Sidebar';
 import toast, { Toaster } from 'react-hot-toast';
-import { updateTenant, getOneTenant } from '../../services/api';
+import { updateTenant, getOneTenant, getProducts, getPlans } from '../../services/api';
 
 
 interface Tenant {
@@ -20,6 +18,8 @@ interface Tenant {
     secondary: string;
     [key: string]: string;
   };
+  products?: any; // Add this line to allow products property
+  plans?: any;    // Add this line to allow plans property
 }
 
 
@@ -132,6 +132,22 @@ const ConfiguracaoTenant: React.FC = () => {
                 </div>
               </div>
               <button onClick={() => setModalEdit(true)} className={`mt-2 px-6 py-2 rounded font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${darkMode ? 'bg-indigo-700 hover:bg-indigo-800 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>Editar Tenant</button>
+              <button
+                onClick={async () => {
+                  let tenantPreview = { ...tenant, theme: themeColors };
+                  try {
+                    if (!token) throw new Error('Token não encontrado');
+                    const produtos = await getProducts(token);
+                    const planos = await getPlans(token);
+                    tenantPreview = { ...tenantPreview, products: produtos, plans: planos };
+                  } catch {}
+                  localStorage.setItem('tenant_preview', JSON.stringify(tenantPreview));
+                  window.open(`/dashboard/site-preview`, '_blank');
+                }}
+                className={`mt-2 px-6 py-2 rounded font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${darkMode ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+              >
+                Preview do Tema
+              </button>
             </div>
           ) : (
             <div className="text-red-600 animate-fade-in">Tenant não encontrado.</div>

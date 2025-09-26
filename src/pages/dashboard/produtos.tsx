@@ -18,16 +18,20 @@ import toast, { Toaster } from "react-hot-toast";
 interface Produto {
   id: string;
   name: string;
-  enterprise_id: string;
+  tenant_id: string;
+  description?: string;
+  price?: string;
+  stock?: number;
 }
 
 interface Plano {
   id: string;
   name: string;
-  title: string;
-  price: string;
+  description: string;
+  price: number | string;
+  tenant_id: string;
   product_id: string;
-  benefits: { id: string; plans_id: string; description: string }[];
+  benefits: string[];
 }
 
 const cores = ["blue", "purple", "green", "orange"] as const;
@@ -55,6 +59,8 @@ const corPlano: Record<typeof cores[number], string> = {
 const Produtos: React.FC = () => {
   const { darkMode } = useTheme();
   const token = localStorage.getItem("token");
+  const user = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user") as string) : null;
+  const tenant_id = user?.tenant_id;
 
   const [produtosData, setProdutosData] = useState<Produto[]>([]);
   const [planosData, setPlanosData] = useState<Plano[]>([]);
@@ -76,7 +82,17 @@ const Produtos: React.FC = () => {
       try {
         const [produtos, planos] = await Promise.all([getProducts(token), getPlans(token)]);
         setProdutosData(produtos);
-        setPlanosData(planos);
+        setPlanosData(
+          planos.map((plano: any) => ({
+            id: plano.id,
+            name: plano.name,
+            description: plano.description ?? "",
+            price: plano.price,
+            tenant_id: plano.tenant_id ?? "",
+            product_id: plano.product_id ?? "",
+            benefits: plano.benefits ?? []
+          }))
+        );
       } catch (error: any) {
         console.error(error);
         toast.error(error.message || "Erro ao carregar dados");
@@ -102,13 +118,21 @@ const Produtos: React.FC = () => {
   // Produto CRUD
   const handleAddProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!token) return toast.error("Token não encontrado");
+    if (!token || !tenant_id) return toast.error("Token ou tenant não encontrado");
     const form = e.currentTarget;
     const name = (form.elements.namedItem("name") as HTMLInputElement).value;
-    const enterprise_id = (form.elements.namedItem("enterprise_id") as HTMLInputElement).value;
-    if (!name || !enterprise_id) return toast.error("Preencha todos os campos");
+    const description = (form.elements.namedItem("description") as HTMLInputElement)?.value || "";
+    const price = (form.elements.namedItem("price") as HTMLInputElement)?.value || "";
+    const stock = Number((form.elements.namedItem("stock") as HTMLInputElement)?.value || "0");
+    if (!name || !description || !price) return toast.error("Preencha todos os campos obrigatórios");
     try {
-      const res = await addProduct(token, { name, enterprise_id });
+      const res = await addProduct(token, {
+        tenant_id,
+        name,
+        description,
+        price,
+        stock
+      });
       setProdutosData((prev) => [...prev, res]);
       setModalAddProduto(false);
       toast.success("Produto adicionado com sucesso");
@@ -121,13 +145,12 @@ const Produtos: React.FC = () => {
 
   const handleEditProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!token || !modalEditProduto) return toast.error("Produto inválido");
+    if (!token || !modalEditProduto || !tenant_id) return toast.error("Produto inválido");
     const form = e.currentTarget;
     const name = (form.elements.namedItem("name") as HTMLInputElement).value;
-    const enterprise_id = (form.elements.namedItem("enterprise_id") as HTMLInputElement).value;
-    if (!name || !enterprise_id) return toast.error("Preencha todos os campos");
+    if (!name) return toast.error("Preencha o nome do produto");
     try {
-      const res = await updateProduct(token, modalEditProduto.id, { name, enterprise_id });
+      const res = await updateProduct(token, modalEditProduto.id, { name, tenant_id });
       setProdutosData((prev) => prev.map((p) => p.id === modalEditProduto.id ? res : p));
       setModalEditProduto(null);
       toast.success("Produto atualizado com sucesso");
@@ -140,7 +163,11 @@ const Produtos: React.FC = () => {
   const handleDeleteProduct = async () => {
     if (!token || !modalDeleteProduto) return toast.error("Produto inválido");
     try {
-      await deleteProduct(token, modalDeleteProduto);
+      await deleteProduct(token, {
+        id: modalDeleteProduto.id,
+        name: modalDeleteProduto.name,
+        enterprise_id: modalDeleteProduto.tenant_id
+      });
       setProdutosData((prev) => prev.filter((p) => p.id !== modalDeleteProduto.id));
       setModalDeleteProduto(null);
       toast.success("Produto deletado com sucesso");
@@ -153,18 +180,36 @@ const Produtos: React.FC = () => {
 // Adicionar Plano
 const handleAddPlano = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
-  if (!token || !modalPlanos) return toast.error("Produto inválido");
+  if (!token || !modalPlanos || !tenant_id) return toast.error("Produto ou tenant inválido");
   const form = e.currentTarget;
   const name = (form.elements.namedItem("name") as HTMLInputElement).value;
-  const title = (form.elements.namedItem("title") as HTMLInputElement).value;
+  const description = (form.elements.namedItem("description") as HTMLInputElement).value;
   let price = (form.elements.namedItem("price") as HTMLInputElement).value;
-  if (!name || !title || !price) return toast.error("Preencha todos os campos");
+  const benefitsRaw = (form.elements.namedItem("benefits") as HTMLInputElement).value;
+  if (!name || !description || !price) return toast.error("Preencha todos os campos obrigatórios");
   price = price.replace(",", ".");
+  const benefits = benefitsRaw.split("\n").map(b => b.trim()).filter(b => b);
   try {
-    await addPlan(token, { name, title, price, product_id: modalPlanos.id, benefits: [] });
-    // Atualiza lista completa de planos
+    await addPlan(token, {
+      tenant_id,
+      name,
+      description,
+      price: price,
+      product_id: modalPlanos.id,
+      benefits
+    });
     const planosAtualizados = await getPlans(token);
-    setPlanosData(planosAtualizados);
+    setPlanosData(
+      planosAtualizados.map((plano: any) => ({
+        id: plano.id,
+        name: plano.name,
+        description: plano.description ?? "",
+        price: plano.price,
+        tenant_id: plano.tenant_id ?? "",
+        product_id: plano.product_id ?? "",
+        benefits: plano.benefits ?? []
+      }))
+    );
     setModalAddPlano(false);
     toast.success("Plano adicionado com sucesso");
     form.reset();
@@ -177,17 +222,36 @@ const handleAddPlano = async (e: React.FormEvent<HTMLFormElement>) => {
 // Editar Plano
 const handleEditPlano = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
-  if (!token || !modalEditPlano) return toast.error("Plano inválido");
+  if (!token || !modalEditPlano || !tenant_id) return toast.error("Plano ou tenant inválido");
   const form = e.currentTarget;
   const name = (form.elements.namedItem("name") as HTMLInputElement).value;
-  const title = (form.elements.namedItem("title") as HTMLInputElement).value;
+  const description = (form.elements.namedItem("description") as HTMLInputElement).value;
   let price = (form.elements.namedItem("price") as HTMLInputElement).value;
-  if (!name || !title || !price) return toast.error("Preencha todos os campos");
+  const benefitsRaw = (form.elements.namedItem("benefits") as HTMLInputElement).value;
+  if (!name || !description || !price) return toast.error("Preencha todos os campos obrigatórios");
   price = price.replace(",", ".");
+  const benefits = benefitsRaw.split("\n").map(b => b.trim()).filter(b => b);
   try {
-    await updatePlan(token, modalEditPlano.id, { name, title, price, product_id: modalEditPlano.product_id });
+    await updatePlan(token, modalEditPlano.id, {
+      tenant_id,
+      name,
+      description,
+      price: price,
+      product_id: modalEditPlano.product_id,
+      benefits
+    });
     const planosAtualizados = await getPlans(token);
-    setPlanosData(planosAtualizados);
+    setPlanosData(
+      planosAtualizados.map((plano: any) => ({
+        id: plano.id,
+        name: plano.name,
+        description: plano.description ?? "",
+        price: plano.price,
+        tenant_id: plano.tenant_id ?? "",
+        product_id: plano.product_id ?? "",
+        benefits: plano.benefits ?? []
+      }))
+    );
     setModalEditPlano(null);
     toast.success("Plano atualizado com sucesso");
   } catch (error: any) {
@@ -202,7 +266,17 @@ const handleDeletePlano = async (id: string) => {
   try {
     await deletePlan(token, id);
     const planosAtualizados = await getPlans(token);
-    setPlanosData(planosAtualizados);
+    setPlanosData(
+      planosAtualizados.map((plano: any) => ({
+        id: plano.id,
+        name: plano.name,
+        description: plano.description ?? "",
+        price: plano.price,
+        tenant_id: plano.tenant_id ?? "",
+        product_id: plano.product_id ?? "",
+        benefits: plano.benefits ?? []
+      }))
+    );
     toast.success("Plano deletado com sucesso");
   } catch (error: any) {
     console.error(error);
@@ -270,8 +344,9 @@ const handleDeletePlano = async (id: string) => {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Produto</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Título</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Descrição</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Preço</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Benefícios</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Ações</th>
               </tr>
             </thead>
@@ -282,8 +357,15 @@ const handleDeletePlano = async (id: string) => {
                   <tr key={plano.id}>
                     <td className="px-6 py-4 whitespace-nowrap">{produtoNome}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{plano.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{plano.title}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{plano.price}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{plano.description}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">R$ {Number(plano.price).toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <ul className="list-disc pl-4">
+                        {plano.benefits?.map((b: any, i: number) => (
+                          <li key={i}>{typeof b === "string" ? b : b.description}</li>
+                        ))}
+                      </ul>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap flex gap-2">
                       <button onClick={() => setModalEditPlano(plano)} className="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400">
                         <FiEdit size={16} />
@@ -303,7 +385,9 @@ const handleDeletePlano = async (id: string) => {
         <Modal open={modalAddProduto} onClose={() => setModalAddProduto(false)} title="Adicionar Produto">
           <form className="space-y-4" onSubmit={handleAddProduct}>
             <input name="name" type="text" placeholder="Nome" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
-            <input name="enterprise_id" type="text" placeholder="Enterprise ID" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
+            <input name="description" type="text" placeholder="Descrição" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
+            <input name="price" type="text" placeholder="Preço" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
+            <input name="stock" type="number" placeholder="Estoque" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
             <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded">Salvar</button>
           </form>
         </Modal>
@@ -312,7 +396,7 @@ const handleDeletePlano = async (id: string) => {
           {modalEditProduto && (
             <form className="space-y-4" onSubmit={handleEditProduct}>
               <input name="name" defaultValue={modalEditProduto.name} className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
-              <input name="enterprise_id" defaultValue={modalEditProduto.enterprise_id} className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
+              {/* Removido input de tenant_id */}
               <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded">Atualizar</button>
             </form>
           )}
@@ -351,7 +435,7 @@ const handleDeletePlano = async (id: string) => {
                     {planosData.filter(p => p.product_id === modalPlanos.id).map(plano => (
                       <tr key={plano.id}>
                         <td className="px-6 py-4 whitespace-nowrap">{plano.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{plano.title}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{plano.description}</td>
                         <td className="px-6 py-4 whitespace-nowrap">R$ {plano.price}</td>
                         <td className="px-6 py-4 whitespace-nowrap flex gap-2">
                           <button onClick={() => setModalEditPlano(plano)} className="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400">
@@ -375,8 +459,9 @@ const handleDeletePlano = async (id: string) => {
           {modalPlanos && (
             <form className="space-y-4" onSubmit={handleAddPlano}>
               <input name="name" placeholder="Nome" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
-              <input name="title" placeholder="Título" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
-              <input name="price" type="text" placeholder="Preço" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
+              <input name="description" placeholder="Descrição" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
+              <input name="price" type="number" step="0.01" placeholder="Preço" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
+              <textarea name="benefits" placeholder="Benefícios (um por linha)" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} rows={4} />
               <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">Salvar</button>
             </form>
           )}
@@ -387,8 +472,9 @@ const handleDeletePlano = async (id: string) => {
           {modalEditPlano && (
             <form className="space-y-4" onSubmit={handleEditPlano}>
               <input name="name" defaultValue={modalEditPlano.name} className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
-              <input name="title" defaultValue={modalEditPlano.title} className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
-              <input name="price" type="number" defaultValue={modalEditPlano.price} className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
+              <input name="description" defaultValue={modalEditPlano.description} className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
+              <input name="price" type="number" step="0.01" defaultValue={modalEditPlano.price} className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} />
+              <textarea name="benefits" defaultValue={modalEditPlano.benefits?.join("\n") || ""} placeholder="Benefícios (um por linha)" className={`w-full border rounded p-2 ${darkMode ? "bg-slate-700 text-slate-200" : "bg-white text-gray-800"}`} rows={4} />
               <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded">Atualizar</button>
             </form>
           )}

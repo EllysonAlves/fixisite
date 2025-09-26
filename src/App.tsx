@@ -8,6 +8,8 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Produtos from "./pages/dashboard/produtos";
 import ConfiguracaoTenant from "./pages/dashboard/configuracao";
 import Temas from "./pages/dashboard/temas";
+import SiteTemplate from "./pages/dashboard/SiteTemplate";
+import ProdutoDetalhe from "./pages/dashboard/ProdutoDetalhe";
 
 function App() {
   return (
@@ -48,6 +50,22 @@ function App() {
             element={
               <PrivateRoute>
                 <Temas />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dashboard/site-preview"
+            element={
+              <PrivateRoute>
+                <SiteTemplate />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dashboard/site-preview/produto/:id"
+            element={
+              <PrivateRoute>
+                <ProdutoDetalhe />
               </PrivateRoute>
             }
           />

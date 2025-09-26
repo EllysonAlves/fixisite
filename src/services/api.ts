@@ -32,7 +32,7 @@ interface Products {
   name: string,
   created_at: string,
   updated_at: string,
-  enterprise_id: string
+  tenant_id: string
 }
 
 interface benefits{
@@ -56,14 +56,16 @@ interface Plans{
 
 interface UpdateProductData {
   name: string;
-  enterprise_id: string;
+  tenant_id: string;
 }
 
-interface UpdatePlanData{
-  name: string,
-  title: string,
-  price: string,
-  product_id: string
+export interface UpdatePlanData {
+  tenant_id: string;
+  name: string;
+  description: string;
+  price: number | string;
+  product_id: string;
+  benefits: string[];
 }
 
 interface Tenant{
